@@ -4,15 +4,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
+//import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+
+
 
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
+//import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
@@ -31,12 +35,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.logging.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Servlet implementation class authenticateUser
  */
-@WebServlet(name="authenticateUser", urlPatterns="/authenticateUser")
-public class authenticateUser extends HttpServlet {
+@WebServlet(name="getGroupMembers", urlPatterns="/getGroupMembers")
+public class getGroupMembers extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private Properties properties = null;
 	
@@ -45,7 +51,7 @@ public class authenticateUser extends HttpServlet {
     /**
      * Default constructor. 
      */
-    public authenticateUser() {
+    public getGroupMembers() {
         // TODO Auto-generated constructor stub
     }
     
@@ -77,7 +83,7 @@ public class authenticateUser extends HttpServlet {
 		//create Json Object
 		JSONObject json = new JSONObject();
 		
-		String user = request.getParameter("dn");
+		String user = request.getParameter("group");
 		if (user == null)
 		{
 			// put some value pairs into the JSON object .
@@ -94,48 +100,29 @@ public class authenticateUser extends HttpServlet {
 		}
 		else
 		{
-			Attributes atts = getLDAPAttributes(user);
-			Attribute cnatt = atts.get("cn");
-			Attribute mailatt = atts.get("mail");
-			Attribute useridatt = atts.get("sAMAccountName");
-            String cn = null;
-            String mail = null;
-            String userid = null;
-			try {
-				cn = (String) cnatt.get();
-				mail = (String) mailatt.get();
-				userid = (String) useridatt.get();
-			} catch (NamingException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
+			List<String> members = getMembersOfGroup(user);
 	
 		    // put some value pairs into the JSON object .
 		    try {
-		    	if (cn.length() > 0){
+		    	if (members.size() > 0){
+		    		Collections.sort(members);
 		    		json.put("success",true);
-		    		json.put("cn", cn);
-		    		json.put("email", mail);
-		    		json.put("userid", userid);
-		    		List<String> groups = getGroups(atts);
-		    		JSONArray members = new JSONArray();
-		    		for (String temp : groups) {
-		    			members.put(temp);
+		    		json.put("num_members",members.size());
+		    		json.put("groupname", user);
+		    		JSONArray names = new JSONArray();
+		    		for (String temp : members) {
+		    			names.put(temp);
 		    		}
-		    		json.put("groups", members);
+		    		json.put("members", names);
 		    	}
-		
 		    	else {
 		    		json.put("success",false);
-		    		json.put("cn", "");
+		    		json.put("members", "");
 		    	}
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			} catch (NamingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			} 
 	
 		    // finally output the json string       
 		    out.print(json.toString());
@@ -149,7 +136,7 @@ public class authenticateUser extends HttpServlet {
 		// TODO Auto-generated method stub
 	}
 
-	private Attributes getLDAPAttributes(String dn)
+	private List<String> getMembersOfGroup(String group)
 	{
         Hashtable<String, String> env = new Hashtable<String, String>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
@@ -160,17 +147,49 @@ public class authenticateUser extends HttpServlet {
 
         DirContext ctx = null;
         NamingEnumeration<?> results = null;
-        Attributes attributes = null;
+        List<String> grpmembers = new ArrayList<String>();
+        
         try {
             ctx = new InitialDirContext(env);
-            SearchControls controls = new SearchControls();
-            controls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-            results = ctx.search("", "(&(objectclass=person)(distinguishedName=" + dn + "))", controls);
-            if (results.hasMore()) {
-                SearchResult searchResult = (SearchResult) results.next();
-                attributes = searchResult.getAttributes();
-            }
-            return attributes;
+            //String userdn = "OU=Security Groups,OU=Managed Objects,DC=esri,DC=com";
+			SearchControls searchCtrls = new SearchControls();
+			searchCtrls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+			String[] atts = {"member"};
+			searchCtrls.setReturningAttributes(atts);
+ 
+            //Change the NameOfGroup for the group name you would like to retrieve the members of.
+			String filter = "(&(objectClass=group)(name=" + group + "))";
+ 
+            //use the context we created above and the filter to return all members of a group.
+			NamingEnumeration<?> values = ctx.search("", filter, searchCtrls);
+
+			//Loop through the search results
+			while (values.hasMoreElements()) {
+				SearchResult sr = (SearchResult)values.next();
+				//System.out.println(">>>" + sr.getName());
+				Attributes attrs = sr.getAttributes();
+ 
+				if (attrs != null)
+				{
+					for (NamingEnumeration<?> ae = attrs.getAll(); ae.hasMore();)
+					{
+						Attribute atr = (Attribute) ae.next();
+						//String attributeID = atr.getID();
+						for (NamingEnumeration<?> e = atr.getAll();e.hasMore();) {
+							String member = (String)e.nextElement();
+				        	Pattern pattern = Pattern.compile("CN=(.*?),");
+				        	Matcher matcher = pattern.matcher(member);
+				        	if (matcher.find()) {
+				        		grpmembers.add(matcher.group(1));
+				        	}
+						}
+					}
+				}
+				else {
+					return null;
+				}
+			}
+			return grpmembers;
         } catch (Throwable e) {
             e.printStackTrace();
             return null;
@@ -190,18 +209,4 @@ public class authenticateUser extends HttpServlet {
         }
 	}
 	
-	private List<String> getGroups(Attributes attributes) throws NamingException
-	{
-        List<String> memberOf = new ArrayList<String>();
-       
-        for(NamingEnumeration<?> vals = attributes.get("memberOf").getAll(); vals.hasMoreElements();){
-        	String member = (String)vals.nextElement();
-        	Pattern pattern = Pattern.compile("CN=(.*?),OU=Security Groups,OU=Managed Objects,DC=esri,DC=com");
-        	Matcher matcher = pattern.matcher(member);
-        	if (matcher.find()) {
-        		memberOf.add(matcher.group(1));
-        	}
-        }
-        return memberOf;
-	}
 }
