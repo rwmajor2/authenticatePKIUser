@@ -9,6 +9,6 @@
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container"/>
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
 	<classpathentry kind="lib" path="C:/Program Files/ArcGIS/Portal/framework/runtime/tomcat/lib/servlet-api.jar"/>
-	<classpathentry kind="lib" path="C:/Users/robe5155/workspace/java-json.jar"/>
+	<classpathentry kind="lib" path="C:/work/json-20160212.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>

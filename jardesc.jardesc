@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
 <jardesc>
-    <jar path="C:/tomcat7/webapps/checkDN/WEB-INF/lib/checkDN.jar"/>
+    <jar path="C:/work/checkDN.jar"/>
     <options buildIfNeeded="true" compress="true" descriptionLocation="/authenticatePKIUser/jardesc.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="true" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
     <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
     <selectedProjects/>
@@ -11,8 +11,8 @@
         </sealing>
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
-        <folder path="/authenticatePKIUser/WebContent"/>
         <folder path="/authenticatePKIUser/build"/>
+        <folder path="/authenticatePKIUser/WebContent"/>
         <javaElement handleIdentifier="=authenticatePKIUser/src"/>
     </selectedElements>
 </jardesc>
